@@ -1,0 +1,10 @@
+# Dependency directory
+node_modules
+
+.DS_Store
+
+# App dist
+dist
+
+#cache
+.eslintcache
