@@ -1,48 +1,67 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import styles from './main.scss';
 import DropDown from '../DropDown/main';
+
+import Actions from '../../actions/NewsFeedActions';
+import Store from '../../stores/NewsFeedStore';
 
 class NewsFeed extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      newsSources: [
-        {
-          value: 'all',
-          label: 'Filter By Source',
-        },
-        {
-          value: 'bbc',
-          label: 'BBC',
-        },
-      ],
-      news: [
-        {
-          source: {
-            id: 'bbc-news',
-            name: 'BBC News',
-          },
-          author: 'BBC News',
-          title: 'Flynn charged for \'making false statement\'',
-          description: 'Trump\'s ex-national security adviser Michael Flynn charged with making false statement to FBI in January',
-          url: 'http://www.bbc.co.uk/news/world-us-canada-42192080',
-          urlToImage: 'https://ichef.bbci.co.uk/news/1024/cpsprodpb/7A23/production/_97176213_breaking_news_bigger.png',
-          publishedAt: '2017-12-01T14:18:35Z',
-        },
-      ],
+      newsSources: null,
+      news: null,
+      loading: true,
+      error: false,
+      loadMore: 0,
+      filtered: null,
     };
 
     this.filterSource = this.filterSource.bind(this);
     this.loadMoreNews = this.loadMoreNews.bind(this);
+    this.onNewsStoreChange = this.onNewsStoreChange.bind(this);
   }
 
-  filterSource(filter) {
-    console.log(`filter: ${filter}`);
+  componentDidMount() {
+    Actions.fetchNews();
+    Store.listen(this.onNewsStoreChange);
+  }
+
+  componentWillUnmount() {
+    Store.unlisten(this.onNewsStoreChange);
+  }
+
+  onNewsStoreChange({ feeds, loading, error }) {
+    const { filterLabel } = this.props;
+
+    const filters = [{ label: filterLabel, value: '' }];
+    feeds.forEach((feed) => {
+      if (!filters.filter(item => item.value === feed.source.id).length) {
+        filters.push({ label: feed.source.name, value: feed.source.id });
+      }
+    });
+
+    this.setState({
+      news: feeds,
+      newsSources: filters,
+      loading,
+      error,
+    });
+  }
+
+  filterSource(filtered) {
+    this.setState({
+      filtered,
+    });
   }
 
   loadMoreNews() {
-    console.log('load more');
+    const { loadMore } = this.state;
+    this.setState({
+      loadMore: loadMore + 1,
+    });
   }
 
   formattedDate(timestamp) {
@@ -51,20 +70,40 @@ class NewsFeed extends React.Component {
   }
 
   render() {
-    const { newsSources, news } = this.state;
+    const {
+      newsSources,
+      news,
+      loading,
+      error,
+      loadMore,
+      filtered,
+    } = this.state;
+    const { feedsToShow } = this.props;
+
+    let feedToLoad = null;
+    let filteredNews = null;
+    const numberOfNews = feedsToShow + (feedsToShow * loadMore);
+
+    if (news) {
+      filteredNews = filtered ? news.filter(item => item.source.id === filtered) : news;
+      feedToLoad = filteredNews && filteredNews.slice(0, numberOfNews);
+    }
+
     return (
       <div className={styles['news-feed']}>
         <div className={styles['news-feed__header']}>
           <h2>News</h2>
-          <div className={styles.filter}>
-            <DropDown onChange={this.filterSource} options={newsSources} />
-          </div>
+          {newsSources &&
+            <div className={styles.filter}>
+              <DropDown onChange={this.filterSource} options={newsSources} />
+            </div>
+          }
         </div>
         <div className={styles['news-feed__body']}>
-          {news.map(newsItem => (
-            <div className={styles['feed-item']} key={newsItem.publishedAt}>
+          {feedToLoad && feedToLoad.map(newsItem => (
+            <div className={styles['feed-item']} key={`${newsItem.source.id}-${newsItem.title}`}>
               <h3>
-                <a href={newsItem.url} title={newsItem.title}>
+                <a href={newsItem.url} title={newsItem.title} target="_blank">
                   {newsItem.title}
                 </a>
               </h3>
@@ -74,13 +113,26 @@ class NewsFeed extends React.Component {
               </div>
             </div>
           ))}
+          {loading && <p>Loading...</p>}
+          {error && <p>{error}</p>}
         </div>
-        <div className={styles['news-feed__actions']}>
-          <button onClick={this.loadMoreNews}>Show More</button>
-        </div>
+        {feedToLoad && numberOfNews <= news.length &&
+          <div className={styles['news-feed__actions']}>
+            <button onClick={this.loadMoreNews}>Show More</button>
+          </div>}
       </div>
     );
   }
 }
+
+NewsFeed.defaultProps = {
+  feedsToShow: 5,
+  filterLabel: 'Filter By Source',
+};
+
+NewsFeed.propTypes = {
+  feedsToShow: PropTypes.number,
+  filterLabel: PropTypes.string,
+};
 
 export default NewsFeed;
