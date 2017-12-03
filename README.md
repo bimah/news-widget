@@ -1,5 +1,5 @@
 # news-widget
-Responsive and cross browser News Widget
+Responsive and cross browser compatible News Widget
 ## Specifications
 * Title should be linked to the original article
 * Clicking on the Show More button should reveal 5 more titles.
