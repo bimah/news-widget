@@ -11,42 +11,30 @@ class NewsFeedStore {
     };
 
     this.bindActions(Actions);
+    this.registerAsync(Source);
   }
 
-  fail(message) {
+  onHandleError(data) {
     this.setState({
       feeds: null,
       loading: false,
-      error: message,
+      error: data.message,
     });
   }
 
-  setFeed(data) {
+  onSetFeeds(data) {
     this.setState({
-      feeds: data,
+      feeds: data.articles,
       loading: false,
       error: false,
     });
   }
 
   onFetchNews() {
-    Source.getTopHeadlines()
-      .then((result) => {
-        if (!result) {
-          this.fail('requestError');
-          throw new Error(`${result.status} - Couldn't fetch news`);
-        }
-        return result;
-      })
-      .then(result => result.json())
-      .then((result) => {
-        if (!result || result.status !== 'ok') {
-          this.fail(result.message);
-          throw new Error(`${result.status} - ${result.message}`);
-        }
-        this.setFeed(result.articles);
-      });
+    if (!this.getInstance().isLoading()) {
+      this.getInstance().getTopHeadlines();
+    }
   }
 }
 
-export default Alt.createStore(NewsFeedStore);
+export default Alt.createStore(NewsFeedStore, 'NewsFeedStore');

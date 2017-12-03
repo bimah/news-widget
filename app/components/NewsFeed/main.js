@@ -37,11 +37,13 @@ class NewsFeed extends React.Component {
     const { filterLabel } = this.props;
 
     const filters = [{ label: filterLabel, value: '' }];
-    feeds.forEach((feed) => {
-      if (!filters.filter(item => item.value === feed.source.id).length) {
-        filters.push({ label: feed.source.name, value: feed.source.id });
-      }
-    });
+    if (feeds) {
+      feeds.forEach((feed) => {
+        if (!filters.filter(item => item.value === feed.source.id).length) {
+          filters.push({ label: feed.source.name, value: feed.source.id });
+        }
+      });
+    }
 
     this.setState({
       news: feeds,
